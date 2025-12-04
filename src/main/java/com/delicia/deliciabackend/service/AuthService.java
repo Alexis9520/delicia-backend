@@ -22,8 +22,9 @@ public class AuthService {
         Optional<Usuario> optionalUsuario = usuarioRepository.findByEmail(email);
         if (optionalUsuario.isPresent() && passwordEncoder.matches(password, optionalUsuario.get().getPassword())) {
             Usuario usuario = optionalUsuario.get();
-            // Siempre pasa el rol como "ROLE_ADMIN", "ROLE_TRABAJADOR", etc.
+            // Rol en formato Spring: "ROLE_ADMIN", "ROLE_TRABAJADOR", etc.
             String springRole = getSpringRole(usuario.getRole());
+            // CORRECTO: Usamos solo .signWith(signingKey) via JwtUtil
             return jwtUtil.generateToken(usuario.getEmail(), springRole, usuario.getName());
         }
         return null;
@@ -41,7 +42,7 @@ public class AuthService {
         return usuarioRepository.save(usuario);
     }
 
-    // Convierte cualquier rol en el formato "ROLE_ADMIN", "ROLE_TRABAJADOR", "ROLE_CLIENTE"
+    // Convierte cualquier rol a formato Spring ("ROLE_ADMIN", etc.)
     private String getSpringRole(String role) {
         if (role.startsWith("ROLE_")) {
             return role;

@@ -7,6 +7,8 @@ import com.delicia.deliciabackend.model.Order;
 import com.delicia.deliciabackend.service.OrderService;
 import com.delicia.deliciabackend.dto.OrderMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/orders")
 public class OrderController {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
+
     @Autowired
     private OrderService orderService;
 
@@ -26,7 +30,9 @@ public class OrderController {
     @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest req, Principal principal) {
-        Order order = orderService.create(req, principal.getName());
+        // Usar el email cliente@delicia.com si principal es null (demo)
+        String userEmail = (principal != null) ? principal.getName() : "cliente@delicia.com";
+        Order order = orderService.create(req, userEmail);
         return ResponseEntity.ok(OrderMapper.toResponse(order));
     }
 
@@ -38,7 +44,8 @@ public class OrderController {
         if (order == null) {
             return ResponseEntity.notFound().build();
         }
-        if (order.getUsuario() == null || !order.getUsuario().getEmail().equals(principal.getName())) {
+        String userEmail = (principal != null) ? principal.getName() : "cliente@delicia.com";
+        if (order.getUsuario() == null || !order.getUsuario().getEmail().equals(userEmail)) {
             return ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok(OrderMapper.toResponse(order));
@@ -48,17 +55,19 @@ public class OrderController {
     @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getOrdersForUser(Principal principal) {
-        List<Order> orders = orderService.findByUsuarioEmail(principal.getName());
+        String userEmail = (principal != null) ? principal.getName() : "cliente@delicia.com";
+        List<Order> orders = orderService.findByUsuarioEmail(userEmail);
         List<OrderResponse> responses = orders.stream()
                 .map(OrderMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
 
-    // Consultar todos los pedidos (solo trabajador)
-    @PreAuthorize("hasAuthority('ROLE_TRABAJADOR')")
+    // Consultar todos los pedidos (trabajador o administrador)
+    @PreAuthorize("hasAnyRole('TRABAJADOR','ADMIN')")
     @GetMapping("/all")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        log.info("GET /api/orders/all called");
         List<Order> orders = orderService.findAll();
         List<OrderResponse> responses = orders.stream()
                 .map(OrderMapper::toResponse)
@@ -66,10 +75,11 @@ public class OrderController {
         return ResponseEntity.ok(responses);
     }
 
-    // Consultar pedido por ID (solo trabajador)
-    @PreAuthorize("hasAuthority('ROLE_TRABAJADOR')")
+    // Consultar pedido por ID (trabajador o administrador)
+    @PreAuthorize("hasAnyRole('TRABAJADOR','ADMIN')")
     @GetMapping("/worker/{id}")
     public ResponseEntity<OrderResponse> getOrderForWorker(@PathVariable Long id) {
+        log.info("GET /api/orders/worker/{} called", id);
         Order order = orderService.findById(id);
         if (order == null) {
             return ResponseEntity.notFound().build();
@@ -77,8 +87,8 @@ public class OrderController {
         return ResponseEntity.ok(OrderMapper.toResponse(order));
     }
 
-    // Actualizar estado del pedido (solo trabajador)
-    @PreAuthorize("hasAuthority('ROLE_TRABAJADOR')")
+    // Actualizar estado del pedido (trabajador o administrador)
+    @PreAuthorize("hasAnyRole('TRABAJADOR','ADMIN')")
     @PutMapping("/{id}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable Long id, @RequestBody StatusUpdateRequest req) {
         Order order = orderService.findById(id);
@@ -87,14 +97,15 @@ public class OrderController {
         }
         order.setStatus(req.getStatus());
         orderService.save(order);
-        return ResponseEntity.ok(OrderMapper.toResponse(order)); // <-- Cambiado para retornar el pedido actualizado
+        return ResponseEntity.ok(OrderMapper.toResponse(order));
     }
 
-    // NUEVO: Registrar venta mostrador (solo trabajador)
-    @PreAuthorize("hasAuthority('ROLE_TRABAJADOR')")
+    // NUEVO: Registrar venta mostrador (trabajador o administrador)
+    @PreAuthorize("hasAnyRole('TRABAJADOR','ADMIN')")
     @PostMapping("/mostrador")
-    public ResponseEntity<OrderResponse> createMostradorOrder(@RequestBody OrderRequest req) {
-        Order order = orderService.createMostrador(req);
+    public ResponseEntity<OrderResponse> createMostrador(@RequestBody OrderRequest req, Principal principal) {
+        String email = principal != null ? principal.getName() : null;
+        Order order = orderService.createMostrador(req, email);
         return ResponseEntity.ok(OrderMapper.toResponse(order));
     }
 }

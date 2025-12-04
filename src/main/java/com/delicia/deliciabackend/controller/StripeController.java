@@ -12,9 +12,7 @@ import java.util.Map;
 @RequestMapping("/api/payments")
 public class StripeController {
 
-    public StripeController() {
-        Stripe.apiKey = System.getenv("STRIPE_SECRET_KEY");
-    }
+
 
     @PostMapping("/create-payment-intent")
     public Map<String, String> createPaymentIntent(@RequestBody Map<String, Object> req) throws Exception {

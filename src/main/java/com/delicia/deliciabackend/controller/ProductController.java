@@ -23,6 +23,7 @@ public class ProductController {
     private ImageBBService imageBBService;
 
     // Obtener productos paginados y filtrados (para el cliente y trabajador)
+    // Nota: mantenemos page como 1-based (por compatibilidad con tu frontend).
     @GetMapping
     public PaginatedResponse<Product> getProducts(
             @RequestParam(defaultValue = "1") int page,
@@ -30,7 +31,10 @@ public class ProductController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String category
     ) {
-        return productService.getProducts(page, pageSize, search, category);
+        // validación defensiva de parámetros antes de delegar
+        int p = Math.max(1, page);
+        int ps = Math.max(1, pageSize);
+        return productService.getProducts(p, ps, search, category);
     }
 
     // Obtener producto por ID

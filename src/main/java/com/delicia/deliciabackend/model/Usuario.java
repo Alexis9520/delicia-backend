@@ -2,6 +2,7 @@ package com.delicia.deliciabackend.model;
 
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
@@ -44,7 +45,8 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of((GrantedAuthority) () -> this.role);
+        // CORREGIDO: Usar SimpleGrantedAuthority para compatibilidad con Spring Security
+        return List.of(new SimpleGrantedAuthority(this.role));
     }
     @Override
     public String getUsername() { return email; }

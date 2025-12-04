@@ -52,6 +52,11 @@ public class ComprobanteService {
                 .stream().findFirst().orElse(null);
     }
 
+    // Buscar comprobante por su id
+    public Comprobante findById(Long comprobanteId) {
+        return comprobanteRepository.findById(comprobanteId).orElse(null);
+    }
+
     // Generar PDF real con los datos del comprobante usando iText
     public byte[] generarPdf(Long comprobanteId) {
         Comprobante c = comprobanteRepository.findById(comprobanteId)
